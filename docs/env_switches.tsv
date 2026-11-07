@@ -237,6 +237,7 @@ DM_NVN_TEX_SOFT_LEVELS	diagnostic
 DM_NVN_TREG_ID	diagnostic	`=<n>` logs every registration of texture ID n: what it holds from then on, and the frame being recorded
 DM_NVN_TSV	diagnostic	`=<path>` writes the per-frame NVN call table and timing rows (frame, metric, value) to a TSV, read by `scripts/bench.py`
 DM_NVN_TSV_CALLS	diagnostic	`0` makes `DM_NVN_TSV` write only the timing rows, without the call counts (about two thirds of the file)
+DM_NVN_TS_HZ	switch	`=<Hz>` sets the tick rate of the raw counter timestamps instead of the profile's `gpu_ts_hz` (default 614,400,000)
 DM_NVN_UB	diagnostic	`="name=item,…;…"`: alternating measurement in one run; odd phases of `DM_NVN_UB_N` frames (default 180) take one category in turn (`@set:<global>=<value>` or dropped shader keys) and log present times
 DM_NVN_UBDC	switch	`0` turns off the remembered uniform conflict answers: ubd_conflict_sh walks every binding at every draw, as before (for an A/B in one build)
 DM_NVN_UBDC_CHECK	diagnostic	`=1` walks every uniform conflict check that a remembered clear answer would skip and logs a red line when the remembered answer was wrong
