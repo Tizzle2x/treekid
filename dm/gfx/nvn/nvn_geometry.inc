@@ -603,15 +603,33 @@ static id<MTLRenderPipelineState> mtk_pso(NvProg *raster) {
 static void mtk_encode(id<MTLRenderCommandEncoder> en_) {
     id<MTL4RenderCommandEncoder> en = (id<MTL4RenderCommandEncoder>)en_; NvShader *ts = g_mtk.ts, *ms = g_mtk.ms;
     [en setArgumentTable:g_vt atStages:MTLRenderStageMesh];
-    uint64_t first = g_mtk.ind + 16;
-    if (!g_mtk.ind) { id<MTLBuffer> b; size_t o = arena_alloc(16, &b); memcpy((uint8_t *)b.contents + o, &g_mtk.first, 4); first = b.gpuAddress + o; }
-    if (ts) { [en setArgumentTable:g_ot atStages:MTLRenderStageObject]; g_args_dirty[3] = 1; g_args_ogen[3]++; encode_args(en, ts, 3, 0);
-              if (rec_on()) rec_table_op(RO_T_ADDR, g_ot, first, DMSH_MESH_FIRST_SLOT); else [g_ot setAddress:first atIndex:DMSH_MESH_FIRST_SLOT]; }
-    g_args_dirty[4] = 1; g_args_ogen[4]++; encode_args(en, ms, 4, 1);
-    enc_r_vbuf(en, DMSH_MESH_FIRST_SLOT, first);
     MTLSize ot = MTLSizeMake(ts ? ts->mesh_threads : 1, 1, 1), mt = MTLSizeMake(ms->mesh_threads, 1, 1);
-    if (g_mtk.ind) [en drawMeshThreadgroupsWithIndirectBuffer:g_mtk.ind threadsPerObjectThreadgroup:ot threadsPerMeshThreadgroup:mt];
-    else [en drawMeshThreadgroups:MTLSizeMake(g_mtk.count, 1, 1) threadsPerObjectThreadgroup:ot threadsPerMeshThreadgroup:mt];
+    if (ts) {
+        uint64_t first = g_mtk.ind + 16;
+        if (!g_mtk.ind) { id<MTLBuffer> b; size_t o = arena_alloc(16, &b); memcpy((uint8_t *)b.contents + o, &g_mtk.first, 4); first = b.gpuAddress + o; }
+        [en setArgumentTable:g_ot atStages:MTLRenderStageObject]; g_args_dirty[3] = 1; g_args_ogen[3]++; encode_args(en, ts, 3, 0);
+        if (rec_on()) rec_table_op(RO_T_ADDR, g_ot, first, DMSH_MESH_FIRST_SLOT); else [g_ot setAddress:first atIndex:DMSH_MESH_FIRST_SLOT];
+        g_args_dirty[4] = 1; g_args_ogen[4]++; encode_args(en, ms, 4, 1);
+        enc_r_vbuf(en, DMSH_MESH_FIRST_SLOT, first);
+        if (g_mtk.ind) [en drawMeshThreadgroupsWithIndirectBuffer:g_mtk.ind threadsPerObjectThreadgroup:ot threadsPerMeshThreadgroup:mt];
+        else [en drawMeshThreadgroups:MTLSizeMake(g_mtk.count, 1, 1) threadsPerObjectThreadgroup:ot threadsPerMeshThreadgroup:mt];
+        return;
+    }
+    // With no task shader the threadgroups are the mesh grid, which Metal holds to IXC_MESH_GRID (1024): past it the GPU read out of bounds and the command buffer failed with a page
+    // fault (Ocarina of Time's foliage: indirect mesh draws of up to 1,771 workgroups, 30-40 s after a save loads; upstream PR #1708). The draw goes in parts of at most that many, each
+    // with its own first workgroup: an indirect draw's parts are the ones ixc.metal writes after the record (IXC_MESH_PARTS of 16 bytes from byte 32), a direct draw's are made here
+    g_args_dirty[4] = 1; g_args_ogen[4]++; encode_args(en, ms, 4, 1);
+    if (g_mtk.ind) {
+        for (int k = 0; k < IXC_MESH_PARTS; k++) { uint64_t part = g_mtk.ind + 32 + 16 * (uint64_t)k;
+            enc_r_vbuf(en, DMSH_MESH_FIRST_SLOT, part + 12);
+            [en drawMeshThreadgroupsWithIndirectBuffer:part threadsPerObjectThreadgroup:ot threadsPerMeshThreadgroup:mt]; }
+        return;
+    }
+    for (uint32_t o = 0; o < g_mtk.count; o += IXC_MESH_GRID) {
+        id<MTLBuffer> b; size_t bo = arena_alloc(16, &b); uint32_t first = g_mtk.first + o; memcpy((uint8_t *)b.contents + bo, &first, 4);
+        enc_r_vbuf(en, DMSH_MESH_FIRST_SLOT, b.gpuAddress + bo);
+        [en drawMeshThreadgroups:MTLSizeMake(MIN(g_mtk.count - o, (uint32_t)IXC_MESH_GRID), 1, 1) threadsPerObjectThreadgroup:ot threadsPerMeshThreadgroup:mt];
+    }
 }
 static void mesh_tasks_draw(const p_draw *dw) {
     if (!S.prog || (!dw->ind && dw->count <= 0)) return;

@@ -12033,6 +12033,11 @@ static void fb_prepare(NvProg *pr) {
 #define IXC_MAX 128
 #define IXC_CAP (3 * 16384)
 typedef struct { uint64_t ind, ibuf; int32_t prim, itype; uint64_t args, ixb; uint32_t ixlen; } ixc_ent;   // args 0: the record could not be converted
+// An entry's argument record: 32 bytes, and for a mesh draw IXC_MESH_PARTS parts of 16 after them (ixc.metal; mtk_encode draws a mesh shader with no task shader in those parts)
+enum { IXC_MESH_PARTS = 8, IXC_MESH_GRID = 1024, IXC_ARG = 32 + 16 * IXC_MESH_PARTS };
+// DM_NVN_MESH_IND_MAXN=<n> (default 4096): a DrawMeshTasksIndirect record's count is capped at n task workgroups (ixc.metal), and a record whose count or first is over 65535 is
+// not a draw (count 0). Ocarina of Time's foliage task shaders return at once from a workgroup numbered past 4095, so 4096 loses nothing there (Peak8D's oot-full-build)
+static uint32_t mesh_ind_cap(void) { static int v = -1; if (v < 0) { const char *e = getenv("DM_NVN_MESH_IND_MAXN"); v = e && atoi(e) > 0 ? MIN(atoi(e), 65535) : 4096; MLOG("indirect task / mesh records: count capped at %d, a count or first past 65535 draws nothing (DM_NVN_MESH_IND_MAXN)", v); } return (uint32_t)v; }
 static ixc_ent g_ixc[IXC_MAX]; static int g_ixc_n; static uint64_t g_ixc_epoch, g_ixc_sub, g_ixc_runs, g_ixc_splits;
 static const uint8_t *g_ixc_stop;   // the uniform update that writes a record converted ahead of it: replay drops the conversions there (ixc_run, as mdx_run's g_mdx_stop)
 // The kernels: dm/gfx/msl/ixc.metal
@@ -12148,32 +12153,32 @@ static void ixc_run(const p_draw *dw, const p_draw_idx *di) {
     int n = g_ixc_n - n0, na = 0; if (n <= 0) return;
     typedef struct { uint64_t rec, args; uint32_t prim, cap; } ajob;
     typedef struct { uint64_t rec, ib, out, args; uint32_t prim, isz, ilen, cap; } ejob;
-    id<MTLBuffer> ab; size_t ao = arena_alloc((size_t)n * (32 + sizeof(ajob)), &ab); uint64_t ag = ab.gpuAddress + ao;   // n argument records (32 bytes apart), then the arrays jobs
-    ajob *aj = (ajob *)((uint8_t *)ab.contents + ao + (size_t)n * 32);
+    id<MTLBuffer> ab; size_t ao = arena_alloc((size_t)n * (IXC_ARG + sizeof(ajob)), &ab); uint64_t ag = ab.gpuAddress + ao;   // n argument records (IXC_ARG bytes apart), then the arrays jobs
+    ajob *aj = (ajob *)((uint8_t *)ab.contents + ao + (size_t)n * IXC_ARG);
     id<MTL4ComputeCommandEncoder> ce = enc_c_begin(NULL); [ce setArgumentTable:at];
     for (int i = 0; i < n; i++) {
         ixc_ent *e = &g_ixc[n0 + i]; uint64_t rec, ib = 0; void *mb; uint64_t mo; e->args = 0;
         if (!mtl_gpu_addr(e->ind, e->prim == DM_PRIM_MESH_TASKS ? 8 : e->itype < 0 ? 16 : 20, &mb, &mo, &rec)) continue;
         if (e->prim == DM_PRIM_MESH_TASKS) {
             if (rec & 3) continue;
-            e->args = ag + 32 * (uint64_t)i;
-            aj[na++] = (ajob){rec, e->args, DM_PRIM_MESH_TASKS, 0};
+            e->args = ag + IXC_ARG * (uint64_t)i;
+            aj[na++] = (ajob){rec, e->args, DM_PRIM_MESH_TASKS, mesh_ind_cap()};
         } else if (e->itype < 0) {   // DrawArraysIndirect quads / fans: the shared index buffers, one thread per record
             if (e->prim == 7) quad_ib_make(); else fan_ib_make();
             e->ixb = e->prim == 7 ? g_quad_gpu : g_fan_gpu; e->ixlen = (uint32_t)(e->prim == 7 ? g_quad_ib.length : g_fan_ib.length);
-            aj[na++] = (ajob){rec, ag + 32 * (uint64_t)i, (uint32_t)e->prim, e->ixlen / 4}; e->args = ag + 32 * (uint64_t)i;
+            aj[na++] = (ajob){rec, ag + IXC_ARG * (uint64_t)i, (uint32_t)e->prim, e->ixlen / 4}; e->args = ag + IXC_ARG * (uint64_t)i;
         } else {   // DrawElementsIndirect: expanded into a 32-bit list, one thread per output index
             if (!mtl_gpu_addr(e->ibuf, 1, &mb, &mo, &ib)) continue;
             id<MTLBuffer> ob; size_t oo = arena_alloc(IXC_CAP * 4 + sizeof(ejob), &ob);
             ejob *j = (ejob *)((uint8_t *)ob.contents + oo + IXC_CAP * 4);
-            *j = (ejob){rec, ib, ob.gpuAddress + oo, ag + 32 * (uint64_t)i, (uint32_t)e->prim, e->itype == 0 ? 1u : e->itype == 1 ? 2u : 4u, (uint32_t)MIN(((__bridge id<MTLBuffer>)mb).length - mo, 0xffffffffull), IXC_CAP};
+            *j = (ejob){rec, ib, ob.gpuAddress + oo, ag + IXC_ARG * (uint64_t)i, (uint32_t)e->prim, e->itype == 0 ? 1u : e->itype == 1 ? 2u : 4u, (uint32_t)MIN(((__bridge id<MTLBuffer>)mb).length - mo, 0xffffffffull), IXC_CAP};
             [at setAddress:ob.gpuAddress + oo + IXC_CAP * 4 atIndex:0]; [ce setComputePipelineState:ps[1]];
             [ce dispatchThreadgroups:MTLSizeMake(IXC_CAP / 64, 1, 1) threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
-            e->ixb = ob.gpuAddress + oo; e->ixlen = IXC_CAP * 4; e->args = ag + 32 * (uint64_t)i;
+            e->ixb = ob.gpuAddress + oo; e->ixlen = IXC_CAP * 4; e->args = ag + IXC_ARG * (uint64_t)i;
             { static int once; if (!once++) MLOG("indirect indexed draw (primitive %d, %d-byte indices) expanded to 32-bit indices on the GPU, at most %d", e->prim, e->itype == 0 ? 1 : e->itype == 1 ? 2 : 4, IXC_CAP); }
         }
     }
-    if (na) { [at setAddress:ag + (uint64_t)n * 32 atIndex:0]; [ce setComputePipelineState:ps[0]]; [ce dispatchThreadgroups:MTLSizeMake((NSUInteger)na, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)]; }
+    if (na) { [at setAddress:ag + (uint64_t)n * IXC_ARG atIndex:0]; [ce setComputePipelineState:ps[0]]; [ce dispatchThreadgroups:MTLSizeMake((NSUInteger)na, 1, 1) threadsPerThreadgroup:MTLSizeMake(1, 1, 1)]; }
     enc_c_end(ce);
     args_dirty_all();
     if (!g_ixc_runs++) MLOG("indirect draw conversion: first time, %d draws (quads, fans, 8-bit indices or mesh tasks converted on the GPU before rendering)", n);

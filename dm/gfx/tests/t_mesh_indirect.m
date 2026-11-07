@@ -34,11 +34,24 @@ int main(void) { @autoreleasepool {
     assert(queued && queued->args && !g_nubd);
     size_t qo = (size_t)(queued->args - converted.gpuAddress);
     assert(qo + 20 <= converted.length);
+    // A mesh shader with no task shader draws the record in parts of at most 1024 workgroups, Metal's mesh grid limit (ixc.metal, mtk_encode): Ocarina of Time's foliage asks for up
+    // to 1,771, and a grid past 1024 read out of bounds (upstream PR #1708). From byte 32 of the converted record, {x, 1, 1, first} for each part, the unused ones empty
+    guest[8] = 1771; guest[9] = 5;
+    const p_draw draw_big = {.prim=DM_PRIM_MESH_TASKS, .ind=(uintptr_t)(guest + 8)};
+    ixc_run(&draw_big, NULL);
+    const ixc_ent *big = ixc_find(&draw_big, NULL);
+    assert(big && big->args);
+    size_t go = (size_t)(big->args - converted.gpuAddress);
+    assert(go + IXC_ARG <= converted.length);
     mtl_sub_commit(); mtl_drain();
+    const uint32_t expected_big[] = {1771, 1, 1, 0, 5, 0, 0, 0, 1024, 1, 1, 5, 747, 1, 1, 1029, 0, 1, 1, 2053};
+    assert(!memcmp((const uint8_t *)converted.contents + go, expected_big, 16 + 4));   // the whole grid and first, as a task shader's draw reads them
+    assert(!memcmp((const uint8_t *)converted.contents + go + 32, expected_big + 8, 3 * 16));   // the first three parts
+    for (int k = 3; k < IXC_MESH_PARTS; k++) assert(((const uint32_t *)((const uint8_t *)converted.contents + go + 32 + 16 * k))[0] == 0);
     const uint32_t expected_3[] = {3, 1, 1, 0, 17}, expected_0[] = {0, 1, 1, 0, 23};
     assert(!memcmp((const uint8_t *)converted.contents + ao, expected_3, sizeof expected_3));
     assert(!memcmp((const uint8_t *)converted.contents + bo, expected_0, sizeof expected_0));
     assert(!memcmp((const uint8_t *)converted.contents + qo, expected_3, sizeof expected_3));
     res_remove(seed); mtl_pool_del(guest); mtl_drain(); munmap(guest, bytes);
-    puts("GPU-written mesh arguments: grid, first task and zero-work dispatch PASS");
+    puts("GPU-written mesh arguments: grid, first task, zero-work dispatch and parts of at most 1024 workgroups PASS");
 } return 0; }

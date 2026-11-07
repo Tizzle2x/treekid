@@ -741,6 +741,7 @@ One line per symptom in the [subsystem references](../reference/): what you see 
 - a large resource retirement batch stalls replay in `NSArray` removal, with hundreds of thousands of entries awaiting release. → [Deferred release partition](../reference/rendering.md#deferred-release-partition)
 - `nvnCommandBufferDrawMeshTasksIndirect` was unimplemented and its GPU-driven draws were skipped. → [Indirect mesh arguments](../reference/rendering.md#indirect-mesh-arguments)
 - `image atomics on a texture Metal cannot run them on` when a shader's R32Uint image view is backed by an RGBA8 color texture. → [Atomic reinterpretation of RGBA8](../reference/rendering.md#atomic-reinterpretation-of-rgba8)
+- a GPU page fault (`kIOGPUCommandBufferCallbackErrorPageFault`) 30 to 40 s after a save loads, then the game hangs or stops. `DM_NVN_SKIP_MESH=1` makes it go away. → [Mesh draws with no task shader above 1024 workgroups](../reference/rendering.md#mesh-draws-with-no-task-shader-above-1024-workgroups)
 
 ## Shaders
 
