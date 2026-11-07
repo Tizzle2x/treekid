@@ -50,6 +50,8 @@ shader_note	0400486024DEC000 shaders
 # agl wraps its depth clears in render conditions, as on Donkey Kong Bananza and Splatoon Raiders: in Kokiri Forest the main opaque pass tests EQUAL against a copy of the prepass depth
 # that a conditional clear (skipped on the console) wiped first, so no lit geometry landed and the full-screen sky showed through everywhere (a white scene)
 render_cond	on
+# The game turns the difference of two raw counter reports into its wind and particle time step at the Switch 2's system counter rate. At NVN's 614.4 MHz the step was 19.66 times too large: foliage, leaves and hanging plants moved about 20 times too fast
+gpu_ts_hz	31250000
 
 # The RAM swap is upstream's DM_GUEST_FILE (on by itself on iOS when the memory pool does not fit the room to the limit); its memory pools stay anonymous (hle_svc.c dm_guest_pool_anon)
 # Raw global memory: compressible (render-target storage), shader code and GPU no-access pools are kept out of the pool table, which made every pool resident (nvn_mtl.m mtl_pool_noraw)
