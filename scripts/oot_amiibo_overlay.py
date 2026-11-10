@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 # oot_amiibo_overlay.py <RomFS.img> <romfs_overlay folder>
 # The Legend of Zelda: Ocarina of Time (Switch 2, 0400486024DEC000): amiibo rules, through the game's own Game/AmiiboSetting file. Writes modified copies of it into
-# variant folders of the overlay, which the host layers over the RomFS by the launcher's Amiibo rows (hle_fs.c rom_overlay_set, DM_AMIIBO_LIMIT and DM_AMIIBO_DROPS):
-#   amiibo-nolimit/      every AmiiboDropActorSettingSet entry has EnableDailyLimit false (the game's two mask entries already do; the drop entries leave it unset, which the game takes as on)
-#   amiibo-nolimit-x2/   the same, and every drop entry with more than one drop chance has its Min/MaxNumberOfDropChance doubled (3-5 → 6-10); single-item entries (the masks) keep 1
-#   amiibo-x2/           the daily limit kept, the drop chances doubled
+# the overlay's amiibo-nolimit/ folder, which the host always layers first (hle_fs.c rom_overlay_set): every AmiiboDropActorSettingSet entry has EnableDailyLimit false (the game's two
+# mask entries already do; the drop entries leave it unset, which the game takes as on). variant() can also double the drop chances (x2), unused.
 # The game's file decides which amiibo count (decoded with MurmurHash3 against the game's own names): NumberingID_1277 and _1279 (one mask each, no daily limit), SeriesID AmiiboSeriesID09
 # (the Legend of Zelda amiibo series) and CharacterBaseID Link, Zelda and Ganon (any series): 3-5 random drops, once a day each.
 # The game's files are read from your own dump; nothing of the game is in this repository.
-import sys, os, struct
+import sys, os, struct, zlib
 PATH = 'Game/AmiiboSetting/AmiiboSetting.game__ui__AmiiboSetting.bgyml'
+RSTB = 'System/Resource/ResourceSizeTable.Product.111.Nin_Ounce_NVN2.rsizetable.zs'
+
+def rstb_raise(z, factor=2):
+    # the resource size table (REST: CRC32 of the path → bytes the game reserves for loading the file) with this file's entry raised: the game's heap for the file
+    # comes from it, and a 2,448-byte rewrite of the 1,476-byte file ran it out (a null allocation at main+0xe156e4, crash at 5 s). Returns the new .zs bytes.
+    import zstandard
+    d = bytearray(zstandard.ZstdDecompressor().decompress(z, max_output_size=1 << 28)); assert d[:4] == b'REST', 'not a resource size table'
+    key = struct.pack('<I', zlib.crc32(PATH.encode())); i = d.find(key)
+    assert i > 0 and d.find(key, i + 1) == -1, 'the size table has no single entry for ' + PATH
+    old = struct.unpack_from('<I', d, i + 4)[0]; assert 1024 < old < 1 << 20, 'implausible size table entry %d' % old
+    struct.pack_into('<I', d, i + 4, old * factor)
+    return zstandard.ZstdCompressor(level=19).compress(bytes(d)), old, old * factor
 
 # ---- BYML v7 (little endian), the node types this file uses: dict C1, array C0, string A0, bool D0, int D1, float D2, uint D3 ----
 class T:   # a typed scalar, so a round trip keeps each value's node type
@@ -72,8 +82,15 @@ def write(ver, root):
         if x.t == 0xD2: return x.t, struct.unpack('<I', struct.pack('<f', x.v))[0]
         if x.t == 0xD1: return x.t, x.v & 0xffffffff
         return x.t, int(x.v)
+    memo = {}
+    def canon(x):   # identical containers are written once and shared, as Nintendo's writer does: the game sizes its heap for the file by the resource size table, so a bigger file crashes it
+        if isinstance(x, dict): return ('d',) + tuple((k, canon(v)) for k, v in sorted(x.items()))
+        if isinstance(x, list): return ('a',) + tuple(canon(v) for v in x)
+        return (x.t, x.v)
     def emit(x):   # writes one container, then its child containers; returns its offset
-        align(); off = len(out); slots = []
+        c = canon(x)
+        if c in memo: return memo[c]
+        align(); off = len(out); slots = []; memo[c] = off
         if isinstance(x, dict):
             items = sorted(x.items(), key=lambda kv: ki[kv[0]])
             out.extend(struct.pack('<I', 0xC1 | len(items) << 8))
@@ -107,11 +124,16 @@ if __name__ == '__main__':
     _, o, n = r.read_index(img)[PATH]
     with open(img, 'rb') as f: f.seek(o); orig = f.read(n)
     ver, data = parse(orig)
-    assert parse(write(ver, data)) == (ver, data), 'the BYML writer does not round-trip the original'
-    for name, nolimit, x2 in (('amiibo-nolimit', 1, 0), ('amiibo-nolimit-x2', 1, 1), ('amiibo-x2', 0, 1)):
+    assert write(ver, data) == orig, 'the BYML writer does not rewrite the original byte for byte'
+    _, o2, n2 = r.read_index(img)[RSTB]
+    with open(img, 'rb') as f: f.seek(o2); rstb, before, after = rstb_raise(f.read(n2))
+    for name, nolimit, x2 in (('amiibo-nolimit', 1, 0),):
         v = variant(data, nolimit, x2); b = write(ver, v)
         assert parse(b) == (ver, v), name + ': the written file does not read back'
         p = os.path.join(outdir, name, PATH); os.makedirs(os.path.dirname(p), exist_ok=True)
         with open(p, 'wb') as f: f.write(b)
+        p = os.path.join(outdir, name, RSTB); os.makedirs(os.path.dirname(p), exist_ok=True)
+        with open(p, 'wb') as f: f.write(rstb)
         drops = sorted({(e['DropActorInfoList']['MinNumberOfDropChance'].v, e['DropActorInfoList']['MaxNumberOfDropChance'].v) for e in v['AmiiboDropActorSettingSet']})
-        print('%-18s %5d bytes  daily limit %s  drop chances %s' % (name, len(b), 'off' if nolimit else 'kept', drops))
+        assert len(b) <= len(orig) + 64, name + ': %d bytes, the original is %d: the game sizes its heap for the file by the original' % (len(b), len(orig))
+        print('%-18s %5d bytes  daily limit %s  drop chances %s  size table %d → %d' % (name, len(b), 'off' if nolimit else 'kept', drops, before, after))

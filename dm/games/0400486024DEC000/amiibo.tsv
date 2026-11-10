@@ -1,8 +1,9 @@
 # Ocarina of Time (Switch 2, 0400486024DEC000): the amiibo its Game/AmiiboSetting file accepts, for the in-game menu's Amiibo list (GameMenu.swift). id<TAB>name<TAB>group.
-# Mask: NumberingID_1277 and _1279, one mask each and no daily limit; these two figures are not in the public amiibo database yet, so only the model number (the game's rule) is real.
+# Mask: NumberingID_1277 → Obj_Mask_Amiibo0 and _1279 → Obj_Mask_Amiibo1, one mask each, no daily limit. The game matches only the model number for these. They are the Young Link and Young Zelda
+# figures of the Ocarina of Time series (2027; each gives an N64-style mask), in the game's order MaskOfAmiiboLink, MaskOfAmiiboZelda; the IDs' character bytes (Link 0100, Zelda 0101) are not checked.
 # Drops: the Legend of Zelda amiibo series (AmiiboSeriesID09) and Link, Zelda and Ganon of any series, 3-5 random drops. IDs and names from amiiboapi.
-0100000004fd0902	Mask amiibo A (#1277)	Mask
-0101000004ff0902	Mask amiibo B (#1279)	Mask
+0100000004fd0902	Young Link - Ocarina of Time (mask)	Mask
+0101000004ff0902	Young Zelda - Ocarina of Time (mask)	Mask
 01000000034f0902	8-Bit Link	Drops
 01410000035c0902	Bokoblin	Drops
 0105000003580902	Daruk	Drops

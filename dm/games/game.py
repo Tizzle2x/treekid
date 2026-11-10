@@ -200,7 +200,7 @@ def header_one(g):
     if not 0.25 <= rsd_v <= 1.0: sys.exit(f'{g.id}: render_scale_default must be 0.25 to 1.0: {rsd}')
     rsp = g.get('res_presets', 'off')   # the launcher's Resolution row (DM_RES_PRESET, hle_fs.c rom_overlay_set): on when the app's romfs_overlay has potato-<mode>/ folders beside <mode>/ (Ocarina of Time: 0.6 of the base)
     if rsp not in ('off', 'on'): sys.exit(f'{g.id}: res_presets must be off or on: {rsp}')
-    amo = g.get('amiibo_overlay', 'off')   # the launcher's Amiibo rows (DM_AMIIBO_LIMIT, DM_AMIIBO_DROPS; hle_fs.c rom_overlay_set): on when the app's romfs_overlay has the amiibo-* folders (scripts/oot_amiibo_overlay.py)
+    amo = g.get('amiibo_overlay', 'off')   # the amiibo overlay (DM_AMIIBO picker list; hle_fs.c rom_overlay_set loads amiibo-nolimit/ always): on when the app's romfs_overlay has the amiibo-* folders (scripts/oot_amiibo_overlay.py)
     if amo not in ('off', 'on'): sys.exit(f'{g.id}: amiibo_overlay must be off or on: {amo}')
     pth = g.get('pad_theme', 'classic')   # the virtual gamepad's colours (DmGamepad.m theme_init; the launcher's Touch controls style, DM_PAD_THEME, overrides): classic = translucent white, forest = the N64-and-woods palette
     if pth not in ('classic', 'forest'): sys.exit(f'{g.id}: pad_theme must be classic or forest: {pth}')
