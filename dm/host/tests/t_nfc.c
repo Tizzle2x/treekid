@@ -99,7 +99,7 @@ int main(void) {
         CHECK(tag_info(tag, &device.handle) == RES_OK && tag[10] == 7, "the tag's info: a 7-byte UID");
         CHECK(model(mi, &device.handle) == DM_NFP_WRONG_STATE, "model info needs the tag mounted");
         CHECK(mount(&device.handle, 0, 1) == RES_OK && device_state(&device.handle) == DM_NFP_DEV_MOUNTED, "the amiibo mounts");
-        CHECK(model(mi, &device.handle) == RES_OK && mi[0] == 0x01 && mi[5] == 0x04, "model info is the amiibo ID");
+        CHECK(model(mi, &device.handle) == RES_OK && mi[0] == 0x01 && mi[1] == 0x00 && mi[3] == 0x00 && mi[4] == 0x04 && mi[5] == 0x00 && mi[7] == 0x02, "model info: character ID, series at 3, numbering ID little-endian at 4");
         CHECK(reg(ri, &device.handle) == RES_OK && !strcmp((const char *)ri + 0x5c, "amiibo"), "register info: an owner and a nickname");
         uint8_t init[8] = {1, 2, 3, 4, 5, 6, 7, 8}; NfpAreaCreateInfo ci = {0x1019c800, 0, init, sizeof init};
         CHECK(open_area(&device.handle, 0x1019c800) == DM_NFP_AREA_NOT_CREATED, "no area before it is created");

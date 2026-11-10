@@ -48,7 +48,9 @@ int main(void) {
     { dm_nfp_tag_info again; dm_amiibo_tag_info(&a, &again); assert(!memcmp(&ti, &again, sizeof ti)); }   // the same tag every scan
     assert(dm_amiibo_model_info(&a, &mi) == DM_NFP_WRONG_STATE);   // found, not mounted
     assert(dm_amiibo_mount(&a) == 0 && a.state == DM_NFP_DEV_MOUNTED);
-    assert(dm_amiibo_model_info(&a, &mi) == 0 && !memcmp(mi.id, LINK, 7)); for (size_t i = 0; i < sizeof mi.r; i++) assert(!mi.r[i]);
+    assert(dm_amiibo_model_info(&a, &mi) == 0 && mi.character[0] == LINK[0] && mi.character[1] == LINK[1] && mi.variant == LINK[2] && mi.type == LINK[3]
+           && mi.numbering == (LINK[4] << 8 | LINK[5]) && mi.series == LINK[6] && mi.tag_type == 2); for (size_t i = 0; i < sizeof mi.r; i++) assert(!mi.r[i]);
+    { const uint8_t *m = (const uint8_t *)&mi; assert(m[3] == LINK[6] && m[4] == LINK[5] && m[5] == LINK[4] && m[6] == LINK[3]); }   // the byte layout games read
     assert(dm_amiibo_common_info(&a, &ci) == 0 && ci.area_size == 0xd8 && ci.year >= 2026 && ci.month >= 1 && ci.month <= 12 && ci.write_counter == 0);
     uint8_t mii[0x58]; memset(mii, 0x11, sizeof mii);
     assert(dm_amiibo_register_info(&a, &ri, mii, "Hero of Hyrule") == 0 && !memcmp(ri.mii, mii, sizeof mii) && !strcmp(ri.nickname, "Hero of Hy"));   // 10 characters

@@ -25,7 +25,10 @@ enum { DM_AMIIBO_AREA_SIZE = 0xd8 };   // the application area of an NTAG215 ami
 enum { DM_NFP_DEV_INIT = 0, DM_NFP_DEV_SEARCH = 1, DM_NFP_DEV_FOUND = 2, DM_NFP_DEV_REMOVED = 3, DM_NFP_DEV_MOUNTED = 4 };
 
 typedef struct { uint8_t uid[10]; uint8_t uid_len; uint8_t r1[0x15]; uint32_t protocol, type; uint8_t r2[0x30]; } dm_nfp_tag_info;
-typedef struct { uint8_t id[7]; uint8_t r[0x39]; } dm_nfp_model_info;   // the amiibo ID's first 7 bytes as the tag holds them (big-endian character and model numbers)
+// nn::nfp::ModelInfo is not the tag's byte order: the service reorders the amiibo ID (CC CC VV TT NN NN SS 02) into character ID (big-endian, as on the tag) and variant, series,
+// numbering ID (host order, little-endian), figure type. Ocarina of Time (Switch 2) reads byte 3 as the series and a 16-bit load at 4 as the numbering ID (main+0x326b518, +0x326b5f4):
+// with the tag's bytes it saw every amiibo as series 00 and the masks' numbering IDs byte-swapped, so only its character rule (Link, Zelda, Ganon) matched.
+typedef struct { uint8_t character[2], variant, series; uint16_t numbering; uint8_t type, tag_type; uint8_t r[0x38]; } dm_nfp_model_info;
 typedef struct { uint16_t year; uint8_t month, day; uint16_t write_counter, version; uint32_t area_size; uint8_t r[0x34]; } dm_nfp_common_info;
 typedef struct { uint8_t mii[0x58]; uint16_t year; uint8_t month, day; char nickname[41]; uint8_t font_region; uint8_t r[0x7a]; } dm_nfp_register_info;
 _Static_assert(sizeof(dm_nfp_tag_info) == 0x58, "nn::nfp::TagInfo");
@@ -141,7 +144,8 @@ static inline void dm_amiibo_today(uint16_t *y, uint8_t *m, uint8_t *d) {
 }
 static inline uint32_t dm_amiibo_model_info(const dm_amiibo *a, dm_nfp_model_info *o) {
     uint32_t r = dm_amiibo_need_mount(a); if (r) return r;
-    memset(o, 0, sizeof *o); memcpy(o->id, a->id, 7); return 0;
+    memset(o, 0, sizeof *o); o->character[0] = a->id[0]; o->character[1] = a->id[1]; o->variant = a->id[2]; o->type = a->id[3];
+    o->numbering = (uint16_t)(a->id[4] << 8 | a->id[5]); o->series = a->id[6]; o->tag_type = 2; return 0;
 }
 static inline uint32_t dm_amiibo_common_info(const dm_amiibo *a, dm_nfp_common_info *o) {
     uint32_t r = dm_amiibo_need_mount(a); if (r) return r;
