@@ -103,6 +103,9 @@ class Stage(unittest.TestCase):
     def test_memory_starts_at_zero(self):   # the count byte relies on it (InstEmitAmpereMem.cs AStageOut)
         self.assertIn('_23[i] = 0u;', self.task()[0])
 
+    def test_position_is_invariant(self):   # two mesh shaders of one geometry must agree: a pre-pass and a colour pass testing depth for equality
+        self.assertIn('float4 position [[position, invariant]];', self.mesh()[0])
+
     def test_mesh_has_both_depth_conventions(self):
         src, _ = self.mesh()
         gl, z = src.split('[[mesh]] void main0_z(')

@@ -121,6 +121,7 @@ From an empty save: at about 45 s `A` (title), `A` (New Game), then the movie. F
 
 ## Found on this game
 
+- [Frame generation between held presents](../../../docs/reference/frame-rate.md#frame-generation-between-held-presents): at the 30 fps cap MetalFX makes a frame between each two presents and the display link shows 60; on the Mac (M5) 7,200 generated and shown, the picture not judged (the Mac libraries of the chain in use were incomplete).
 - [HMMA chains keep their matrices in the SIMD-group](../../../docs/reference/shaders.md#hmma-chains-keep-their-matrices-in-the-simd-group): the NDVE movie networks behind the title and the opening, 14.8 → 11.4 ms of compute a frame on this M6.
 - [Compute pipelines built on the submit thread at their first dispatch](../../../docs/reference/frame-rate.md#compute-pipelines-built-on-the-submit-thread-at-their-first-dispatch): frames of 2-4 s on entering a new area; 155 s of the title on a cold Metal cache.
 - [Raw global memory lookups that start from their last entry](../../../docs/reference/shaders.md#raw-global-memory-lookups-that-start-from-their-last-entry): the foliage, vertex and compute shaders read structures word by word through loaded addresses; about 2 ms less GPU a frame at the spawn point.
