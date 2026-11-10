@@ -34,6 +34,7 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         UILaunchScreen: {}
         UIFileSharingEnabled: true          # Documents (log.txt, saves) visible in the Files app
+        NFCReaderUsageDescription: "Reads the amiibo you hold to the phone, for the game."   # AmiiboScan.swift (the Amiibo menu's Scan an amiibo)
         LSSupportsOpeningDocumentsInPlace: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationLandscapeRight

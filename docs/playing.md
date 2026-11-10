@@ -36,7 +36,38 @@ English by default. Pick another when packing with `--language` (`-l`), by code 
 
 ## amiibo
 
-There is no NFC reader, so an amiibo is named instead: a line `DM_AMIIBO=<amiibo ID>` in the [settings file](#settings-in-a-file), with the figure's 16-digit ID as amiibo lists print it (Link, Super Smash Bros. series: `DM_AMIIBO=0100000000040002`). When the game asks you to touch an amiibo, it finds that one. The game can read which figure it is and create, read and write its own save data on it, which is kept in an `amiibo` folder beside the game's saves (or `DM_AMIIBO_DIR=<folder>`, to share figures between games). `DM_AMIIBO_NAME` sets the figure's nickname.
+On iPhone, a game whose profile lists its amiibo (`amiibo.tsv`, for now The Legend of Zelda: Ocarina of Time) has an **Amiibo** entry in the in-game menu (the gamepad's menu button at the top centre), with three ways to put a figure on the reader:
+
+- **Pick one from the list.** Nothing else is needed. None takes the amiibo away.
+- **Scan an amiibo**: hold a real figure flat against the top of the back of the phone, by the camera, until the sheet says it is ready. Then use amiibo in the game as usual (Ocarina of Time: Items, the amiibo icon, ZR). Only the figure's ID is read; nothing is written to it. The figure stays on the reader until you scan or pick another.
+- **A Shortcuts automation**, for installs that can't use the NFC reader (below).
+
+### When Scan an amiibo says "Not available in this install"
+
+iOS lets an app use the NFC reader only when the app is signed with the NFC tag reading permission (`com.apple.developer.nfc.readersession.formats` with `TAG`) and its Info.plist has an NFC usage text (`NFCReaderUsageDescription`, which the build adds). Without them the row says so and, when tapped, explains why instead of scanning (a scan without the usage text would close the game).
+
+- **Signed with a certificate service or a paid developer account:** most of these profiles include NFC. Check the profile: `security cms -D -i profile.mobileprovision | grep -A4 nfc` should list `TAG`. Sign with that entitlement in your entitlements file.
+- **Free Apple ID (SideStore, AltStore, Xcode with a personal team):** these may not include NFC. Use the list or Shortcuts.
+- **LiveContainer:** the game runs inside LiveContainer's app, so iOS checks **LiveContainer's** signature and Info.plist, not the game's. The scan works only when LiveContainer itself was signed with the NFC permission and has an `NFCReaderUsageDescription` in its Info.plist (add one, for example "Reads amiibo for games", before signing LiveContainer). Otherwise use the list or Shortcuts.
+
+### Real figures without the NFC permission: Shortcuts
+
+The Shortcuts app can react to an NFC tag by itself, so a tap of a figure can load it into the game in any install, LiveContainer included. Set it up once for each figure:
+
+1. Find the figure's ID: the first column of the game's `amiibo.tsv` (in this repository: `dm/games/<title ID>/amiibo.tsv`), or any amiibo list (16 hex digits).
+2. Shortcuts → **Automation** → **+** → **NFC** → **Scan**, hold the figure to the phone and give it a name (for example "Link"). Choose **Run Immediately**.
+3. New blank automation. Add a **Text** action holding just the ID, for example `0100000000040002`.
+4. Add **Set Name** with the name `amiibo.txt`.
+5. Add **Save File**: turn off **Ask Where to Save**, choose the game's **Documents** folder as the destination and turn on **Overwrite If File Exists**.
+   - Installed as an app: Files → On My iPhone → the game's folder.
+   - In LiveContainer: Files → On My iPhone → LiveContainer → Data → Application → the folder whose Documents holds the game's `log.txt`.
+6. To use it, tap the figure to the phone (the automation runs and the file is replaced), then use amiibo in the game.
+
+An automation for an empty file (a Text action with nothing in it) takes the amiibo away, as None does.
+
+### Elsewhere
+
+On the Mac, which has no NFC reader (and in any build, as a setting), an amiibo is named instead: a line `DM_AMIIBO=<amiibo ID>` in the [settings file](#settings-in-a-file), with the figure's 16-digit ID as amiibo lists print it (Link, Super Smash Bros. series: `DM_AMIIBO=0100000000040002`). When the game asks you to touch an amiibo, it finds that one. The game can read which figure it is and create, read and write its own save data on it, which is kept in an `amiibo` folder beside the game's saves (or `DM_AMIIBO_DIR=<folder>`, to share figures between games). `DM_AMIIBO_NAME` sets the figure's nickname.
 
 To change figures while playing, make `DM_AMIIBO` the path of a text file that holds the ID (`DM_AMIIBO=/path/to/amiibo.txt`): the game reads it again at every scan, so write another ID into it before the next scan, or empty it for no amiibo. The figure's own data from a real amiibo is not read: the game sees a fresh figure the first time.
 

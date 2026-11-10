@@ -50,6 +50,9 @@ private func amiiboMenu() -> UIMenuElement? {
         groups[g]!.append(UIAction(title: r[1], state: r[0].lowercased() == now ? .on : .off) { _ in put(r[0]) })
     }
     var children: [UIMenuElement] = [UIAction(title: "None", state: now.isEmpty ? .on : .off) { _ in put("") }]
+    // a real amiibo, read by the phone's NFC reader (AmiiboScan.swift); in an install that can't use the reader, the row says so and explains instead
+    var names: [String: String] = [:]; for r in rows { names[r[0].lowercased()] = r[1] }
+    children.insert(AmiiboScan.menuItem(path: path, names: names), at: 0)
     for g in order { children.append(UIMenu(title: g, options: g.isEmpty ? .displayInline : [], children: groups[g]!)) }
     let name = rows.first { $0[0].lowercased() == now }?[1]
     return UIMenu(title: "Amiibo", subtitle: name ?? (now.isEmpty ? "None" : now), children: children)
