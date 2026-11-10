@@ -32,6 +32,8 @@ DM_RUMBLE	toggle	-	1	always	Controls	Game rumble		level=basic
 DM_RUMBLE_GAIN	range	0:3:0.1	1.0	always	Controls	Rumble strength		needs=DM_RUMBLE=1
 DM_RUMBLE_MIN	range	0:0.9:0.05	0	always	Controls	Rumble cutoff
 DM_WIDE_VIEW	toggle	-	0	fixups:WIDE_VIEW	Game	Wide view	Fills the whole iPhone screen with a wider view and no black bars. Renders about a fifth more pixels and uses more memory: a little slower and warmer. Takes effect the next time the game starts.
+DM_AMIIBO_LIMIT	toggle	-	0	DM_GAME_AMIIBO_OVERLAY!=0	Game	Amiibo daily limit	On, each amiibo gives drops once a day, as on the console. Off, every scan gives drops. Takes effect the next time the game starts.
+DM_AMIIBO_DROPS	toggle	2/1	0	DM_GAME_AMIIBO_OVERLAY!=0	Game	Double amiibo drops	Twice the items from an amiibo scan (6 to 10 instead of 3 to 5); the masks stay one each. Takes effect the next time the game starts.
 DM_SCREEN_ASPECT	choice	1.43=iPhone Duo screen (1.43:1),0=16:9 (Switch)	1.43|0	DM_GAME_SCREEN_ASPECT!=0	Game	Picture shape	Renders about a quarter more pixels: a little slower and warmer.
 DM_FRAME_WG	toggle	-	DM_GAME_FRAME_WG	gfxapi:nvn	Performance	Deadline boost	Tells iOS each frame's deadline, so it keeps the game on the fast cores at a higher clock. Uses more power and heat.
 DM_RT	toggle	1/0	1	gfxapi:nvn	Performance	Real-time presenting	On tells iOS how much of each frame the presenting thread needs, which keeps it fast. Off may use less power, with a risk of more stutter.

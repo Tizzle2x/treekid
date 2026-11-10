@@ -1,0 +1,38 @@
+# Ocarina of Time (Switch 2, 0400486024DEC000): the amiibo its Game/AmiiboSetting file accepts, for the in-game menu's Amiibo list (GameMenu.swift). id<TAB>name<TAB>group.
+# Mask: NumberingID_1277 and _1279, one mask each and no daily limit; these two figures are not in the public amiibo database yet, so only the model number (the game's rule) is real.
+# Drops: the Legend of Zelda amiibo series (AmiiboSeriesID09) and Link, Zelda and Ganon of any series, 3-5 random drops. IDs and names from amiiboapi.
+0100000004fd0902	Mask amiibo A (#1277)	Mask
+0101000004ff0902	Mask amiibo B (#1279)	Mask
+01000000034f0902	8-Bit Link	Drops
+01410000035c0902	Bokoblin	Drops
+0105000003580902	Daruk	Drops
+01020100041a0902	Ganondorf - Tears of the Kingdom	Drops
+0140000003550902	Guardian	Drops
+0100000003530902	Link - Archer	Drops
+0100000003990902	Link - Link's Awakening	Drops
+01000000034c0902	Link - Majora's Mask	Drops
+01000000034b0902	Link - Ocarina of Time	Drops
+0100000003540902	Link - Rider	Drops
+01000000034e0902	Link - Skyward Sword	Drops
+0100000004180902	Link - Tears of the Kingdom	Drops
+01000000034d0902	Link - Twilight Princess	Drops
+01030000024f0902	Midna & Wolf Link	Drops
+010d000004a70902	Mineru's Construct	Drops
+01070000035a0902	Mipha	Drops
+01080000035b0902	Revali	Drops
+0109000004a30902	Riju	Drops
+010a000004a40902	Sidon	Drops
+0100010003500902	Toon Link - The Wind Waker	Drops
+0101000003520902	Toon Zelda - The Wind Waker	Drops
+010b000004a50902	Tulin	Drops
+0106000003590902	Urbosa	Drops
+010c000004a60902	Yunobo	Drops
+0101000003560902	Zelda	Drops
+0101000004190902	Zelda - Tears of the Kingdom	Drops
+0101030004140902	Zelda and Loftwing	Drops
+01020100001b0002	Ganondorf (Smash)	Drops
+0100000000040002	Link (Smash)	Drops
+0101010000170002	Sheik (Smash)	Drops
+0100010000160002	Toon Link (Smash)	Drops
+01000000037c0002	Young Link (Smash)	Drops
+01010000000e0002	Zelda (Smash)	Drops

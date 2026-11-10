@@ -194,8 +194,15 @@ static void rom_overlay_set(char *dst, size_t n, const char *env) {
     // DM_RES_PRESET=1 (the launcher's Resolution: Potato): potato-<mode>/ in place of <mode>/ where a folder has it (Ocarina of Time: 0.6 of the base, 1152x648 handheld,
     // 1536x864 docked, against 1280x720 and 1951x1098), for a steadier frame rate on a hot phone; 0 (Normal, the default) or a folder without it keeps <mode>/
     const char *pe = getenv("DM_RES_PRESET"); int potato = pe && (atoi(pe) == 1 || !strcmp(pe, "potato"));
+    // DM_AMIIBO_LIMIT (the launcher's Amiibo daily limit: 1 on, unset or 0 off) and DM_AMIIBO_DROPS (2: Double amiibo drops): amiibo-nolimit/, amiibo-nolimit-x2/ or amiibo-x2/ first where a folder
+    // has it (Ocarina of Time's Game/AmiiboSetting file, scripts/oot_amiibo_overlay.py); limit on and single drops take none, the game's own file
+    const char *ae = getenv("DM_AMIIBO_LIMIT"), *de = getenv("DM_AMIIBO_DROPS"); int alimit = ae && atoi(ae) == 1, ax2 = de && atoi(de) == 2;
+    const char *avar = !alimit ? (ax2 ? "amiibo-nolimit-x2" : "amiibo-nolimit") : ax2 ? "amiibo-x2" : NULL;
     for (char *root = strtok_r(roots, ":", &save); root; root = strtok_r(NULL, ":", &save)) {
-        char sub[1100]; struct stat st; snprintf(sub, sizeof sub, "%s/potato-%s", root, mode);
+        char sub[1100]; struct stat st;
+        if (avar) { snprintf(sub, sizeof sub, "%s/%s", root, avar);
+            if (!stat(sub, &st) && S_ISDIR(st.st_mode)) { if (dst[0]) strlcat(dst, ":", n); strlcat(dst, sub, n); LOG("fs rom overlay: %s (amiibo: daily limit %s, drops %s)", sub, alimit ? "on" : "off", ax2 ? "doubled" : "as the game's"); } }
+        snprintf(sub, sizeof sub, "%s/potato-%s", root, mode);
         if (!potato || stat(sub, &st) || !S_ISDIR(st.st_mode)) snprintf(sub, sizeof sub, "%s/%s", root, mode);
         if (!stat(sub, &st) && S_ISDIR(st.st_mode)) { if (dst[0]) strlcat(dst, ":", n); strlcat(dst, sub, n); LOG("fs rom overlay: %s for the %s mode%s", sub, mode, potato ? " (resolution preset Potato)" : ""); }
         if (dst[0]) strlcat(dst, ":", n); strlcat(dst, root, n);

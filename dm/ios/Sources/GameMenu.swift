@@ -30,7 +30,29 @@ private func gameMenuItems() -> [UIMenuElement] {
         }
     }
     if !placed { items.insert(UIMenu(options: .displayInline, children: [layout]), at: 0) }
+    if let a = amiiboMenu() { items.insert(UIMenu(options: .displayInline, children: [a]), at: 0) }
     return items
+}
+
+// The amiibo on the reader: the app's romfs_overlay/amiibo.tsv lists the amiibo the game accepts (id, name, group); a pick writes its ID into the file DM_AMIIBO names
+// (main.m: Documents/amiibo.txt), which the host reads at the game's next scan, so it changes while the game runs. None empties it: the reader finds nothing
+private func amiiboMenu() -> UIMenuElement? {
+    guard let ov = ProcessInfo.processInfo.environment["DM_ROMFS_OVERLAY"]?.split(separator: ":").first,
+          let path = ProcessInfo.processInfo.environment["DM_AMIIBO"], path.hasPrefix("/"),
+          let list = try? String(contentsOfFile: String(ov) + "/amiibo.tsv", encoding: .utf8) else { return nil }
+    let rows = list.split(separator: "\n").filter { !$0.hasPrefix("#") }.map { $0.split(separator: "\t", omittingEmptySubsequences: false).map(String.init) }.filter { $0.count >= 2 }
+    let now = ((try? String(contentsOfFile: path, encoding: .utf8)) ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    func put(_ id: String) { try? (id.isEmpty ? "" : id + "\n").write(toFile: path, atomically: true, encoding: .utf8) }
+    var groups: [String: [UIMenuElement]] = [:], order: [String] = []
+    for r in rows {
+        let g = r.count > 2 ? r[2] : ""
+        if groups[g] == nil { groups[g] = []; order.append(g) }
+        groups[g]!.append(UIAction(title: r[1], state: r[0].lowercased() == now ? .on : .off) { _ in put(r[0]) })
+    }
+    var children: [UIMenuElement] = [UIAction(title: "None", state: now.isEmpty ? .on : .off) { _ in put("") }]
+    for g in order { children.append(UIMenu(title: g, options: g.isEmpty ? .displayInline : [], children: groups[g]!)) }
+    let name = rows.first { $0[0].lowercased() == now }?[1]
+    return UIMenu(title: "Amiibo", subtitle: name ?? (now.isEmpty ? "None" : now), children: children)
 }
 
 private func gameMenuRow(_ m: LauncherModel, _ s: Setting) -> UIMenuElement {

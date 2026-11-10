@@ -222,6 +222,8 @@ static NSString *program_env(void) {
     {   // game file replacements packed beside the RomFS (build_ipa.sh: a romfs_overlay folder beside the game's RomFS image), served over it (hle_fs.c DM_ROMFS_OVERLAY)
         NSString *ov = [res stringByAppendingPathComponent:prog ? [prog stringByAppendingPathComponent:@"romfs_overlay"] : @"romfs_overlay"]; BOOL dir = NO;
         if ([fm fileExistsAtPath:ov isDirectory:&dir] && dir) { setenv("DM_ROMFS_OVERLAY", ov.fileSystemRepresentation, 0); fprintf(stderr, "boot: game file replacements %s\n", getenv("DM_ROMFS_OVERLAY")); }
+        // The in-game menu's Amiibo list (GameMenu.swift) writes the chosen amiibo's ID into Documents/amiibo.txt; the host reads it at each scan (hle_sdk16.c StartDetection, amiibo.h dm_amiibo_select)
+        if ([fm fileExistsAtPath:[ov stringByAppendingPathComponent:@"amiibo.tsv"]]) setenv("DM_AMIIBO", [doc stringByAppendingPathComponent:@"amiibo.txt"].fileSystemRepresentation, 0);
     }
     setenv("DM_NVN_SHMAP", [dmdir stringByAppendingPathComponent:@"shader_map.tsv"].fileSystemRepresentation, 0);
     setenv("DM_MSL_DIR", msl.fileSystemRepresentation, 0);

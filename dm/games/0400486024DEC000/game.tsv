@@ -109,6 +109,8 @@ dispatch_overlap	on
 # One Render scale slider in place of the Resolution row (Normal / Potato): a fixed fraction of the game's base size (render_base: 2560x1440 docked, 1920x1080
 # handheld), from 0.25 (480x270 handheld, marked Potato) to 1.0 (1920x1080); 0.667 is the old Normal's 1280x720. The render-scale stub (patches.py) fixes every value up to 1.0
 res_presets	off
+# amiibo: the game's Game/AmiiboSetting file in three variants (scripts/oot_amiibo_overlay.py into the romfs_overlay folder): the daily limit off, the drop chances doubled, or both
+amiibo_overlay	on
 render_base	2560x1440 1920x1080
 render_scale	0.25:1.0:0.05
 render_scale_default	0.667
