@@ -140,7 +140,10 @@ def to_stage(msl, i):
     stride = max(len(vertex) + len(primitive), 1) * BLOCK   # words of an attribute block
     word = lambda comps, n: [f'{mem}[b + {comps[k] * BLOCK}u]' if comps[k] is not None else None for k in range(4)]
     vm, pm = _members(vertex), {n: [c + len(vertex) if c is not None else None for c in v] for n, v in _members(primitive).items()}
-    head += ('struct dm_vertex_t {\n    float4 position [[position]];\n' + ''.join(f'    float4 a{n} [[user(locn{n})]];\n' for n in vm if n is not None) + '};\n' +
+    # The position is invariant, as a vertex shader's: a game may draw the same geometry with two mesh shaders and test the second for depth equality
+    # (Ocarina of Time draws its foliage with a mesh depth pre-pass and a mesh colour pass with depth EQUAL: without the mark, pixels that missed EQUAL flashed white for one frame;
+    # nxnative e5f1adee, PR #1673)
+    head += ('struct dm_vertex_t {\n    float4 position [[position, invariant]];\n' + ''.join(f'    float4 a{n} [[user(locn{n})]];\n' for n in vm if n is not None) + '};\n' +
              ('struct dm_prim_t {\n' + ''.join(f'    float4 p{n} [[user(locn{n})]];\n' for n in pm) + '};\n' if pm else '') +
              f'using dm_mesh_t = metal::mesh<dm_vertex_t, {"dm_prim_t" if pm else "void"}, {max_v}, {max_p}, metal::topology::triangle>;\n')
     block = lambda v: f'{out}u + ({v} / {BLOCK}u) * {stride}u + {v} % {BLOCK}u'

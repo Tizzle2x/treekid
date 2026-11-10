@@ -69,9 +69,13 @@ rt_drop	off
 # Handheld, as the iPhone runs it (the game presents 1920x1080 instead of 2048x1152 docked)
 op_mode	handheld
 # Render pipelines through Metal 4 on the iPhone too, as on the Mac: the pipeline archive and hybrid pipelines (a draw starts with a ready base instead of waiting for its own pipeline).
-# With it off, every pipeline the game first used compiled on the submit thread: on an iPhone 18 Pro the opening cutscene's transitions froze for 0.2-1.3 s each. The IPA carries no
-# offline archive (the A20's architecture name is not known here); the launcher's pipeline prebuild builds the bases once on the first start and keeps them
+# With it off, every pipeline the game first used compiled on the submit thread: on an iPhone 18 Pro the opening cutscene's transitions froze for 0.2-1.3 s each. Since X3 the IPA
+# carries the offline archive for the A20 (pso_gpu below); the launcher's pipeline prebuild builds on the device whatever it does not hold
 pso_mtl4	on
+# The pipeline archive made offline for the iPhone 18 Pro's GPU (applegpu_g19p, the architecture its logs name), so draws start from ready bases (hybrid pipelines) instead of
+# compiling at their first draw: X2 at 30 fps froze 0.3-2.9 s at new areas and effects (log 70: 45 pipelines in one 2.86 s frame, archive lookups found 0, hybrid draws 0). Until X3, every V and X
+# build used --gpu none, as the A20's architecture name was not known
+pso_gpu	applegpu_g19p
 # Frame rate: the host steps the game in whole vsyncs (patches.py FRAME_STEP: the frame-rate controller's interval and fps follow the host's step), so the launcher's Frame rate
 # setting offers 30 and 60. At 30 every frame is held two vsyncs (33.3 ms) and the game's own 30 fps mode steps its time by two, so it runs at full speed
 fps_target	60

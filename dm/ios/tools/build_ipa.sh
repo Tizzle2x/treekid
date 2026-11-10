@@ -151,6 +151,20 @@ if [ "$GFXAPI" = nvn ] && [ -n "$GPUS" ] && [ "$GPUS" != none ] && [ -f "$GD/sha
     t "[RED] pipeline archive: pso_offline.py failed (its output is above); the app is built without one and the device builds its pipeline bases on its first start (DM_PSO_GPUS=none skips this step)"
     rm -rf "$PSO"; PSO=
   fi
+  # LiveContainer signs every Mach-O it finds in an app it installs, and a pipeline archive is one (a 64-bit GPU executable): its signer failed on the 2.6 GB applegpu_g19p.mtl4a
+  # ("Failed to Sign …/pso/applegpu_g19p.mtl4a") and the install stopped. The app carries each archive as <gpu>.mtl4x, a clone (cp -c: no extra disk) whose first 4 bytes read
+  # DMPA instead of the Mach-O magic, so no signer takes it for code; the host clones it back into Documents/pso_bundle with the magic restored (nvn_mtl.m pso_bundle_unwrap)
+  if [ -n "${PSO:-}" ] && [ -d "$PSO" ]; then
+    PA=$W/build/ios/pso/app; rm -rf "$PA"; mkdir -p "$PA" || die "mkdir $PA"
+    for f in "$PSO"/*; do
+      case $f in
+        *.mtl4a) x=$PA/$(basename "${f%.mtl4a}").mtl4x; cp -c "$f" "$x" 2>/dev/null || cp "$f" "$x" || die "copy $f"
+                 printf 'DMPA' | dd of="$x" bs=4 count=1 conv=notrunc 2>/dev/null || die "mark $x"; t "pipeline archive packed as $(basename "$x") (not a Mach-O for the installer's signer)" ;;
+        *) cp -c "$f" "$PA/" 2>/dev/null || cp "$f" "$PA/" || die "copy $f" ;;
+      esac
+    done
+    PSO=$PA
+  fi
 else [ "$GFXAPI" != nvn ] || t "no pipeline archive ($([ -n "${DM_PSO_GPUS+set}" ] && echo "DM_PSO_GPUS=${GPUS:-empty}" || echo "the profile does not set pso_mtl4 on; DM_PSO_GPUS=g18p builds one")$([ -f "$GD/shader_pairs.tsv" ] || echo ', no shader_pairs.tsv'))"; fi
 # The packed language (DMLanguage) is the Game language row's default, which settings.py makes the game's first language when it lacks DM_LANG: the screen and DM_LAUNCHER=0 then agree
 LD=$(python3 -c 'import json, sys; print(next((s["default"] for s in json.load(open(sys.argv[1]))["settings"] if s["env"] == "DM_LANG"), ""))' $LJ) || die "launcher settings ($LJ)"

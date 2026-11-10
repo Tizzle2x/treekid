@@ -191,8 +191,9 @@ __attribute__((weak)) int dm_opmode(void) { return 0; }   // hle_oe.c's (the con
 static void rom_overlay_set(char *dst, size_t n, const char *env) {
     char *roots = strdup(env); if (!roots) die("rom overlay allocation failed");
     const char *mode = dm_opmode() == 1 ? "docked" : "handheld"; char *save = NULL; dst[0] = 0;
-    // DM_RES_PRESET=1 (the launcher's Resolution: Potato): potato-<mode>/ in place of <mode>/ where a folder has it (Ocarina of Time: 0.6 of the base, 1152x648 handheld,
-    // 1536x864 docked, against 1280x720 and 1951x1098), for a steadier frame rate on a hot phone; 0 (Normal, the default) or a folder without it keeps <mode>/
+    // DM_RES_PRESET=1 (the launcher's Resolution: Potato): potato-<mode>/ in place of <mode>/ where a folder has it (Ocarina of Time: 0.75 of the base, with the graphics scale
+    // tier 2 that hle_oe.c answers for Potato: 960x540 into a 1280x720 frame, against Normal's 1280x720 into 1920x1080), for a steadier frame rate on a hot phone; 0 (Normal,
+    // the default) or a folder without it keeps <mode>/
     const char *pe = getenv("DM_RES_PRESET"); int potato = pe && (atoi(pe) == 1 || !strcmp(pe, "potato"));
     // amiibo-nolimit/ first where a folder has it: Ocarina of Time's Game/AmiiboSetting with every amiibo's daily limit off, and the size table entry it needs (scripts/oot_amiibo_overlay.py)
     const char *avar = "amiibo-nolimit";
